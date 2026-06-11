@@ -238,17 +238,37 @@
             pitLaneCoords = null;
             results.style.display = 'none';
             const types = ['tree', 'water', 'building'];
-            const numObstacles = Math.floor(Math.random() * 8) + 12;
+            
+            // Responsive Map Generation Engine
+            const isMobile = window.innerWidth < 768;
+            
+            // Less obstacles on mobile to prevent choking the screen
+            const numObstacles = isMobile 
+                ? Math.floor(Math.random() * 4) + 4  // 4 to 7 on mobile
+                : Math.floor(Math.random() * 8) + 12; // 12 to 19 on desktop
+                
+            // Tighter margins on mobile to maximize drawing space
+            const marginX = isMobile ? 35 : 75;
+            const marginTop = isMobile ? 80 : 100;
+            const marginBot = isMobile ? 50 : 100;
+            
+            // Scale down the physical size of obstacles on small screens
+            const sizeMultiplier = isMobile ? 0.6 : 1.0;
             
             for(let i=0; i<numObstacles; i++) {
                 const type = types[Math.floor(Math.random() * types.length)];
-                const x = Math.random() * (canvas.width - 150) + 75;
-                const y = Math.random() * (canvas.height - 200) + 100;
+                
+                // Keep objects within the safe zone
+                const x = Math.random() * (canvas.width - (marginX * 2)) + marginX;
+                const y = Math.random() * (canvas.height - (marginTop + marginBot)) + marginTop;
                 
                 if (type === 'building') {
-                    obstacles.push({ type, x, y, w: Math.random() * 60 + 40, h: Math.random() * 60 + 40 });
+                    const w = (Math.random() * 60 + 40) * sizeMultiplier;
+                    const h = (Math.random() * 60 + 40) * sizeMultiplier;
+                    obstacles.push({ type, x, y, w, h });
                 } else {
-                    obstacles.push({ type, x, y, radius: Math.random() * 30 + 25 });
+                    const radius = (Math.random() * 30 + 25) * sizeMultiplier;
+                    obstacles.push({ type, x, y, radius });
                 }
             }
             redrawCanvas();

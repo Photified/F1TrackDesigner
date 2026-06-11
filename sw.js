@@ -1,4 +1,4 @@
-const CACHE_NAME = 'track-designer-v1';
+const CACHE_NAME = 'track-designer-v2';
 const ASSETS = [
   '/',
   '/index.html',
