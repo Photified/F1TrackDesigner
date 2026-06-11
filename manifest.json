@@ -1,0 +1,23 @@
+{
+  "name": "F1 Track Designer",
+  "short_name": "Track Design",
+  "description": "Draw and rate custom racing circuits.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#15151e",
+  "theme_color": "#15151e",
+  "icons": [
+    {
+      "src": "icon192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

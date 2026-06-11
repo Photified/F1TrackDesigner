@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>F1 Track Designer</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#15151e">
+    <style>
+        :root {
+            --f1-red: #e10600;
+            --dark-bg: #15151e;
+            --panel-bg: rgba(34, 34, 42, 0.95);
+            --text-main: #ffffff;
+            --text-muted: #a0a0a8;
+        }
+        
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--dark-bg); color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            overflow: hidden; touch-action: none;
+            -webkit-user-select: none; user-select: none;
+        }
+
+        /* App Header */
+        header {
+            position: absolute; top: 0; left: 0; width: 100%; height: 60px;
+            background-color: var(--dark-bg); border-bottom: 2px solid var(--f1-red);
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 10; box-sizing: border-box; padding: 0 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transform: translateY(-100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        header.visible { transform: translateY(0); }
+        header h1 { margin: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; }
+
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        
+        .top-score-display {
+            font-size: 0.85rem; font-weight: bold; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1px;
+            background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 20px;
+        }
+        
+        .top-score-display span { color: #ffd700; font-size: 1.1rem; margin-left: 5px; text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);}
+
+        .help-btn {
+            background: transparent; color: var(--text-main);
+            border: 2px solid var(--text-muted); border-radius: 50%;
+            width: 32px; height: 32px; font-weight: bold; font-size: 1.1rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: 0.2s;
+        }
+        .help-btn:hover { border-color: var(--f1-red); color: var(--f1-red); }
+
+        /* Full Screen Welcome */
+        #welcome-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(21, 21, 30, 0.95); z-index: 30;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(10px); transition: opacity 0.4s ease;
+        }
+
+        .welcome-content { text-align: center; max-width: 400px; padding: 20px; }
+        .welcome-content h1 { font-size: 2.5rem; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 10px; color: white;}
+        .welcome-content p { color: var(--text-muted); line-height: 1.6; font-size: 1.05rem; margin-bottom: 30px;}
+
+        /* Modals */
+        .modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); z-index: 20;
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .clean-modal {
+            background-color: var(--panel-bg); width: 85%; max-width: 400px;
+            border-radius: 16px; padding: 30px; box-sizing: border-box;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8); 
+            border-left: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--f1-red);
+            text-align: center;
+        }
+        
+        .clean-modal h2 { margin: 0 0 15px 0; font-size: 1.4rem; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .dark-container {
+            background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; 
+            text-align: left; margin-bottom: 20px;
+        }
+        
+        .dark-container p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin: 0; }
+        .dark-container strong { color: white; }
+
+        .btn-primary {
+            background-color: var(--f1-red); color: white; border: none;
+            padding: 14px 28px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; 
+            cursor: pointer; text-transform: uppercase; width: 100%; transition: background 0.2s;
+            letter-spacing: 1px; box-shadow: 0 4px 15px rgba(225, 6, 0, 0.3);
+        }
+        .btn-primary:hover { background-color: #ff1e18; }
+        
+        #installBtn { display: none; margin-top: 10px; }
+
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+        /* Results Modal Specifics */
+        #results {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            display: none; z-index: 10; 
+        }
+
+        .score { font-size: 4rem; font-weight: bold; color: var(--f1-red); margin: 5px 0; line-height: 1; text-shadow: 0 2px 10px rgba(225,6,0,0.3);}
+        .stats { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px; font-weight: bold; line-height: 1.5; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;}
+        .verdict { font-size: 1rem; line-height: 1.5; color: #e0e0e0; margin-bottom: 25px;}
+        
+        .new-record { color: #ffd700; font-weight: bold; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem;}
+    </style>
+</head>
+<body>
+
+    <header id="main-header">
+        <h1>Track Designer</h1>
+        <div class="header-controls">
+            <div class="top-score-display">Top Score <span id="best-score-val">0.0</span></div>
+            <button class="help-btn" onclick="openHelp()">?</button>
+        </div>
+    </header>
+
+    <div id="welcome-overlay">
+        <div class="welcome-content">
+            <h1>Track Designer</h1>
+            <p>Draw a world-class racing circuit in a single stroke. Thread the needle through the environment, master the technical flow, and build straights where cars can absolutely floor it.</p>
+            <button class="btn-primary" onclick="startApp()">Build Track</button>
+            <button class="btn-primary" id="installBtn" style="background-color: #005c9e; margin-top: 15px; box-shadow: 0 4px 15px rgba(0, 92, 158, 0.3);">Install App</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="helpModal">
+        <div class="clean-modal">
+            <h2>Circuit Rules</h2>
+            <div class="dark-container">
+                <p><strong>1. Avoid Obstacles:</strong> Don't draw through lakes or buildings.<br><br>
+                   <strong>2. Top Speed:</strong> Include at least one massive, straight blast so cars can reach top aerodynamic speeds.<br><br>
+                   <strong>3. Flow:</strong> Sprawling, complex layouts with tight technical sectors score much higher than simple ovals.</p>
+            </div>
+            <button class="btn-primary" onclick="closeHelp()">Resume</button>
+        </div>
+    </div>
+
+    <div id="results" class="clean-modal">
+        <div style="text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; color: #888; font-weight: bold;">FIA Circuit Rating</div>
+        <div class="score" id="score-value">0.0</div>
+        <div class="stats" id="stats-value"></div>
+        <div class="verdict" id="verdict"></div>
+        <button class="btn-primary" onclick="initMap()">Generate New Map</button>
+    </div>
+
+    <canvas id="trackCanvas"></canvas>
+
+    <script>
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+        let topScore = parseFloat(localStorage.getItem('f1track_topscore')) || 0.0;
+        document.getElementById('best-score-val').innerText = topScore > 0 ? topScore.toFixed(1) : '--';
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Reg failed:', err)));
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') installBtn.style.display = 'none';
+                deferredPrompt = null;
+            }
+        });
+
+        let appStarted = false;
+        const header = document.getElementById('main-header');
+        const welcomeOverlay = document.getElementById('welcome-overlay');
+        const helpModal = document.getElementById('helpModal');
+        const canvas = document.getElementById('trackCanvas');
+        const ctx = canvas.getContext('2d');
+        const results = document.getElementById('results');
+        
+        let isDrawing = false;
+        let points = [];
+        let obstacles = [];
+        let pitLaneCoords = null; 
+        const SNAP_THRESHOLD = 150; 
+
+        function startApp() {
+            welcomeOverlay.style.opacity = '0';
+            setTimeout(() => {
+                welcomeOverlay.style.display = 'none';
+                header.classList.add('visible');
+                appStarted = true;
+                resize(); 
+            }, 400);
+        }
+
+        function openHelp() { helpModal.style.display = 'flex'; }
+        function closeHelp() { helpModal.style.display = 'none'; }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            if(appStarted && obstacles.length === 0) initMap();
+        }
+        window.addEventListener('resize', resize);
+        
+        function initMap() {
+            obstacles = [];
+            points = [];
+            pitLaneCoords = null;
+            results.style.display = 'none';
+            const types = ['tree', 'water', 'building'];
+            const numObstacles = Math.floor(Math.random() * 8) + 12;
+            
+            for(let i=0; i<numObstacles; i++) {
+                const type = types[Math.floor(Math.random() * types.length)];
+                const x = Math.random() * (canvas.width - 150) + 75;
+                const y = Math.random() * (canvas.height - 200) + 100;
+                
+                if (type === 'building') {
+                    obstacles.push({ type, x, y, w: Math.random() * 60 + 40, h: Math.random() * 60 + 40 });
+                } else {
+                    obstacles.push({ type, x, y, radius: Math.random() * 30 + 25 });
+                }
+            }
+            redrawCanvas();
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(obs => {
+                if (obs.type === 'tree') {
+                    ctx.fillStyle = '#172e14'; ctx.beginPath(); ctx.arc(obs.x - 4, obs.y + 6, obs.radius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#2d5a27'; ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#3a7332'; ctx.beginPath(); ctx.arc(obs.x + 5, obs.y - 5, obs.radius * 0.7, 0, Math.PI * 2); ctx.fill();
+                } else if (obs.type === 'water') {
+                    ctx.fillStyle = '#1a3c5e'; ctx.beginPath(); ctx.ellipse(obs.x, obs.y, obs.radius * 1.3, obs.radius * 1.1, Math.PI/6, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#2b5c8f'; ctx.beginPath(); ctx.ellipse(obs.x, obs.y, obs.radius * 1.0, obs.radius * 0.8, Math.PI/6, 0, Math.PI * 2); ctx.fill();
+                } else if (obs.type === 'building') {
+                    ctx.fillStyle = '#111115'; ctx.fillRect(obs.x + 6, obs.y + 8, obs.w, obs.h);
+                    ctx.fillStyle = '#4a4a52'; ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                    ctx.fillStyle = '#6a6a75'; ctx.fillRect(obs.x, obs.y, obs.w, 4);
+                    ctx.fillRect(obs.x, obs.y, 4, obs.h);
+                }
+            });
+        }
+
+        function checkCollision(x, y) {
+            for (let obs of obstacles) {
+                if (obs.type === 'tree' || obs.type === 'water') {
+                    if (Math.hypot(x - obs.x, y - obs.y) < obs.radius + 8) return true;
+                } else if (obs.type === 'building') {
+                    if (x > obs.x - 5 && x < obs.x + obs.w + 5 && y > obs.y - 5 && y < obs.y + obs.h + 5) return true;
+                }
+            }
+            return false;
+        }
+
+        canvas.addEventListener('pointerdown', e => {
+            if (!appStarted || e.clientY < 60 || results.style.display === 'block' || helpModal.style.display === 'flex') return;
+            isDrawing = true; points = []; pitLaneCoords = null;
+            addPoint(e); redrawCanvas();
+        });
+
+        canvas.addEventListener('pointermove', e => {
+            if (!isDrawing) return;
+            if (checkCollision(e.clientX, e.clientY)) {
+                isDrawing = false;
+                showError("RED FLAG! You crashed into local geography. The safety car is out.");
+                return;
+            }
+            addPoint(e); redrawCanvas();
+        });
+
+        canvas.addEventListener('pointerup', finishDrawing);
+        canvas.addEventListener('pointercancel', finishDrawing);
+
+        function addPoint(e) { points.push({ x: e.clientX, y: e.clientY }); }
+
+        function calculatePitLane(startPt, endPt) {
+            const entryIndex = points.length - Math.min(30, points.length - 2);
+            const exitIndex = Math.min(30, points.length - 2);
+            
+            const entryPt = points[entryIndex];
+            const exitPt = points[exitIndex];
+            
+            const theta = Math.atan2(startPt.y - endPt.y, startPt.x - endPt.x);
+            const offset = 35; 
+            
+            const dx = Math.cos(theta - Math.PI/2) * offset;
+            const dy = Math.sin(theta - Math.PI/2) * offset;
+            
+            const corner1 = { x: endPt.x + dx, y: endPt.y + dy };
+            const corner2 = { x: startPt.x + dx, y: startPt.y + dy };
+            
+            return { entryPt, corner1, corner2, exitPt, startPt, endPt };
+        }
+
+        function drawCheckeredLine(x1, y1, x2, y2) {
+            const dx = x2 - x1; const dy = y2 - y1;
+            const dist = Math.hypot(dx, dy);
+            const angle = Math.atan2(dy, dx);
+            
+            ctx.save();
+            ctx.translate(x1, y1);
+            ctx.rotate(angle);
+            
+            const trackWidth = 14; 
+            const squareSize = trackWidth / 2; 
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, -trackWidth/2, dist, trackWidth);
+            
+            for (let i = 0; i < dist; i += squareSize) {
+                if (Math.floor(i / squareSize) % 2 === 0) {
+                    ctx.fillStyle = '#111111';
+                    ctx.fillRect(i, -squareSize, Math.min(squareSize, dist - i), squareSize);
+                } else {
+                    ctx.fillStyle = '#111111';
+                    ctx.fillRect(i, 0, Math.min(squareSize, dist - i), squareSize);
+                }
+            }
+            ctx.restore();
+        }
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawObstacles();
+
+            if (points.length < 2) return;
+            
+            // --- LAYER 1: WHITE OUTLINES ---
+            ctx.beginPath(); ctx.lineWidth = 16; ctx.strokeStyle = '#ffffff';
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+            ctx.stroke();
+
+            if (pitLaneCoords) {
+                ctx.beginPath(); ctx.lineWidth = 10; ctx.strokeStyle = '#ffffff';
+                ctx.moveTo(pitLaneCoords.entryPt.x, pitLaneCoords.entryPt.y);
+                ctx.lineTo(pitLaneCoords.corner1.x, pitLaneCoords.corner1.y); 
+                ctx.lineTo(pitLaneCoords.corner2.x, pitLaneCoords.corner2.y);
+                ctx.lineTo(pitLaneCoords.exitPt.x, pitLaneCoords.exitPt.y); 
+                ctx.stroke();
+            }
+
+            // --- LAYER 2: DARK ASPHALT ---
+            ctx.beginPath(); ctx.lineWidth = 12; ctx.strokeStyle = '#222226';
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+            ctx.stroke();
+
+            if (pitLaneCoords) {
+                ctx.beginPath(); ctx.lineWidth = 6; ctx.strokeStyle = '#2a2a30'; 
+                ctx.moveTo(pitLaneCoords.entryPt.x, pitLaneCoords.entryPt.y);
+                ctx.lineTo(pitLaneCoords.corner1.x, pitLaneCoords.corner1.y); 
+                ctx.lineTo(pitLaneCoords.corner2.x, pitLaneCoords.corner2.y);
+                ctx.lineTo(pitLaneCoords.exitPt.x, pitLaneCoords.exitPt.y); 
+                ctx.stroke();
+            }
+
+            // --- LAYER 3: MARKINGS ---
+            if (pitLaneCoords) {
+                ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = '#005c9e';
+                ctx.setLineDash([8, 8]);
+                ctx.moveTo(pitLaneCoords.corner1.x, pitLaneCoords.corner1.y); 
+                ctx.lineTo(pitLaneCoords.corner2.x, pitLaneCoords.corner2.y);
+                ctx.stroke(); ctx.setLineDash([]); 
+
+                drawCheckeredLine(pitLaneCoords.endPt.x, pitLaneCoords.endPt.y, pitLaneCoords.startPt.x, pitLaneCoords.startPt.y);
+            } else {
+                ctx.beginPath(); ctx.fillStyle = '#ffffff';
+                ctx.arc(points[0].x, points[0].y, 6, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        function finishDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false;
+
+            if (points.length < 20) return showError("Track is too short! Draw a longer circuit.");
+
+            const start = points[0], end = points[points.length - 1];
+            const gap = Math.hypot(end.x - start.x, end.y - start.y);
+
+            if (gap <= SNAP_THRESHOLD) {
+                points.push({ x: start.x, y: start.y });
+                pitLaneCoords = calculatePitLane(start, end);
+                
+                evaluateGeometry();
+                redrawCanvas(); 
+            } else {
+                showError("Not a closed loop! Ensure your start and finish points are close together.");
+            }
+        }
+
+        function evaluateGeometry() {
+            let perimeter = 0;
+            let shoelaceArea = 0;
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                perimeter += Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                shoelaceArea += (p1.x * p2.y - p2.x * p1.y);
+            }
+
+            // Base sample to remove micro hand jitters
+            const sampled = [points[0]];
+            for (let i = 1; i < points.length; i++) {
+                const last = sampled[sampled.length - 1];
+                if (Math.hypot(points[i].x - last.x, points[i].y - last.y) > 15) {
+                    sampled.push(points[i]);
+                }
+            }
+
+            // THE CORRIDOR ALGORITHM (Line-of-Sight Check)
+            let maxStraightPixels = 0;
+            const TOLERANCE = 20; // Maximum pixels a line can bow/deviate before it's a corner
+
+            for (let i = 0; i < sampled.length; i++) {
+                for (let j = i + 2; j < sampled.length; j++) {
+                    const pA = sampled[i];
+                    const pB = sampled[j];
+                    const distAB = Math.hypot(pB.x - pA.x, pB.y - pA.y);
+
+                    let isStraight = true;
+                    // Check every point between the start and end of this theoretical straight
+                    for (let k = i + 1; k < j; k++) {
+                        const pK = sampled[k];
+                        // Calculate perpendicular distance from the actual drawn point to the theoretical straight line
+                        const num = Math.abs((pB.y - pA.y) * pK.x - (pB.x - pA.x) * pK.y + pB.x * pA.y - pB.y * pA.x);
+                        const perpDist = num / distAB;
+
+                        // If the line curves out of the 20-pixel corridor, the straight is officially broken
+                        if (perpDist > TOLERANCE) {
+                            isStraight = false;
+                            break;
+                        }
+                    }
+
+                    if (isStraight) {
+                        if (distAB > maxStraightPixels) {
+                            maxStraightPixels = distAB;
+                        }
+                    } else {
+                        // If it bent out of the corridor to reach J, it won't be straight to J+1 either
+                        break; 
+                    }
+                }
+            }
+
+            const metersPerPixel = 5000 / perimeter; 
+            const longestStraightMeters = maxStraightPixels * metersPerPixel;
+            
+            // F1 Aero-Drag Speed Curve (Speed scales tightly with the square root of distance)
+            let topSpeed = 140 + (Math.sqrt(longestStraightMeters) * 6.5);
+            topSpeed = Math.min(360, Math.max(140, topSpeed));
+
+            const area = Math.abs(shoelaceArea / 2);
+            let circularity = (4 * Math.PI * area) / (perimeter * perimeter);
+            
+            let complexityScore = Math.max(0, (0.4 - circularity) * 12); 
+            let speedScore = Math.max(0, (topSpeed - 230) / 35); 
+            let lengthScore = Math.min(2.0, perimeter / 2500);
+            
+            let score = 2.0 + complexityScore + speedScore + lengthScore;
+            
+            if (circularity > 0.6) score -= 2.0; 
+            score = parseFloat(Math.max(1.0, Math.min(10.0, score)).toFixed(1));
+
+            let isNewRecord = false;
+            if (score > topScore) {
+                topScore = score;
+                localStorage.setItem('f1track_topscore', topScore.toFixed(1));
+                document.getElementById('best-score-val').innerText = topScore.toFixed(1);
+                isNewRecord = true;
+            }
+
+            let complexityLabel = circularity < 0.2 ? "High (Technical Flow)" : circularity < 0.4 ? "Medium (Balanced)" : "Low (Speedway Oval)";
+            
+            let verdict = "";
+            if (score >= 9.5) verdict = "A true masterpiece. Incredibly technical layout with massive top-speed zones. The drivers will love it.";
+            else if (score >= 7.5) verdict = "Great circuit. Good balance of technical flow, but could use a longer DRS straight.";
+            else if (score >= 5.0) verdict = "Passable, but it feels a bit safe. It needs more sprawling hairpins and longer straights.";
+            else verdict = "Processional and boring. It's too simple. Try adding chicanes and massive straights.";
+
+            if (isNewRecord) verdict = `<span class="new-record">🏆 New Highest Rating!</span>` + verdict;
+
+            document.getElementById('score-value').innerText = score.toFixed(1);
+            document.getElementById('stats-value').innerHTML = `
+                Technical Complexity: <span style="color:white;">${complexityLabel}</span><br>
+                Est. Top Speed: <span style="color:white;">${Math.round(topSpeed)} km/h</span>
+            `;
+            document.getElementById('verdict').innerHTML = verdict;
+            results.style.display = 'block';
+        }
+
+        function showError(msg) {
+            document.getElementById('score-value').innerText = "—";
+            document.getElementById('stats-value').innerText = "";
+            document.getElementById('verdict').innerText = msg;
+            results.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
