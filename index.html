@@ -103,7 +103,20 @@
         }
         .btn-primary:hover { background-color: #ff1e18; }
         
-        #installBtn { display: none; margin-top: 10px; }
+        .btn-secondary {
+            background-color: transparent; color: var(--text-muted); border: 1px solid var(--text-muted);
+            padding: 12px 24px; border-radius: 8px; font-size: 0.9rem; font-weight: bold; 
+            cursor: pointer; text-transform: uppercase; width: 100%; margin-top: 10px;
+        }
+        .btn-secondary:hover { background-color: rgba(255,255,255,0.05); color: white; }
+        
+        #installBtn { 
+            display: none; 
+            background-color: #005c9e; 
+            box-shadow: 0 4px 15px rgba(0, 92, 158, 0.3); 
+            margin-bottom: 10px;
+        }
+        #installBtn:hover { background-color: #004a80; }
 
         canvas { position: absolute; top: 0; left: 0; z-index: 1; display: block; width: 100%; height: 100%; cursor: crosshair; }
 
@@ -135,7 +148,6 @@
             <h1>Track Designer</h1>
             <p>Draw a world-class racing circuit in a single stroke. Thread the needle through the environment, master the technical flow, and build straights where cars can absolutely floor it.</p>
             <button class="btn-primary" onclick="startApp()">Build Track</button>
-            <button class="btn-primary" id="installBtn" style="background-color: #005c9e; margin-top: 15px; box-shadow: 0 4px 15px rgba(0, 92, 158, 0.3);">Install App</button>
         </div>
     </div>
 
@@ -147,7 +159,8 @@
                    <strong>2. Top Speed:</strong> Include at least one massive, straight blast so cars can reach top aerodynamic speeds.<br><br>
                    <strong>3. Flow:</strong> Sprawling, complex layouts with tight technical sectors score much higher than simple ovals.</p>
             </div>
-            <button class="btn-primary" onclick="closeHelp()">Resume</button>
+            <button class="btn-primary" id="installBtn">Install App</button>
+            <button class="btn-secondary" onclick="closeHelp()">Resume</button>
         </div>
     </div>
 
@@ -439,14 +452,11 @@
                     const distAB = Math.hypot(pB.x - pA.x, pB.y - pA.y);
 
                     let isStraight = true;
-                    // Check every point between the start and end of this theoretical straight
                     for (let k = i + 1; k < j; k++) {
                         const pK = sampled[k];
-                        // Calculate perpendicular distance from the actual drawn point to the theoretical straight line
                         const num = Math.abs((pB.y - pA.y) * pK.x - (pB.x - pA.x) * pK.y + pB.x * pA.y - pB.y * pA.x);
                         const perpDist = num / distAB;
 
-                        // If the line curves out of the 20-pixel corridor, the straight is officially broken
                         if (perpDist > TOLERANCE) {
                             isStraight = false;
                             break;
@@ -458,7 +468,6 @@
                             maxStraightPixels = distAB;
                         }
                     } else {
-                        // If it bent out of the corridor to reach J, it won't be straight to J+1 either
                         break; 
                     }
                 }
@@ -467,7 +476,6 @@
             const metersPerPixel = 5000 / perimeter; 
             const longestStraightMeters = maxStraightPixels * metersPerPixel;
             
-            // F1 Aero-Drag Speed Curve (Speed scales tightly with the square root of distance)
             let topSpeed = 140 + (Math.sqrt(longestStraightMeters) * 6.5);
             topSpeed = Math.min(360, Math.max(140, topSpeed));
 
